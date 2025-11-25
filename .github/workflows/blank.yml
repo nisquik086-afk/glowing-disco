@@ -1,4 +1,4 @@
-name: Minecraft + Playit Tunnel
+name: Minecraft + SSHX Terminal
 
 on:
   workflow_dispatch:
@@ -6,34 +6,28 @@ on:
 jobs:
   start:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
 
     steps:
       - name: Baixar repositório
         uses: actions/checkout@v3
 
-      - name: Instalar Java 17 (Minecraft)
+      - name: Instalar Java 17
         uses: actions/setup-java@v3
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
-      - name: Baixar Playit CLI
+      - name: Instalar sshx
         run: |
-          wget https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-linux-amd64 -O playit
-          chmod +x playit
+          curl -fsSL https://sshx.io/get | sh
+          chmod +x ~/.sshx/bin/sshx
+          echo "SSHX instalado."
 
       - name: Preparar servidor
         run: |
-          mkdir server
+          mkdir -p server
           cp -r server-files/* server/ || true
           echo "eula=true" > server/eula.txt
-
-      - name: Iniciar Playit
-        run: |
-          nohup ./playit --secret "${{ secrets.PLAYIT_AUTH }}" > playit.log 2>&1 &
-          echo "Playit iniciado."
 
       - name: Iniciar servidor Minecraft
         run: |
@@ -41,11 +35,15 @@ jobs:
           nohup java -Xms1G -Xmx2G -jar server.jar nogui > ../server.log 2>&1 &
           echo "Servidor Minecraft iniciado."
 
-      - name: Manter rodando
+      - name: Iniciar SSHX Terminal
         run: |
-          echo "Loop infinito para manter o workflow rodando..."
-          while true; do
-            sleep 10
-          done
-    env:
-      PLAYIT_AUTH: ${{ secrets.PLAYIT_AUTH }}
+          echo "Iniciando sessão SSHX..."
+          ~/.sshx/bin/sshx --print-url > sshx_url.txt &
+          sleep 3
+          echo "===== SSHX URL ====="
+          cat sshx_url.txt
+
+      - name: Manter workflow rodando
+        run: |
+          echo "Servidor + SSHX estão ativos..."
+          tail -f /dev/null
