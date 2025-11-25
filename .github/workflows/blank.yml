@@ -1,0 +1,50 @@
+name: Minecraft + Playit Tunnel
+
+on:
+  workflow_dispatch:
+
+jobs:
+  start:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v3
+
+      - name: Instalar Java 17 (Minecraft)
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Baixar Playit CLI
+        run: |
+          wget https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-linux-amd64 -O playit
+          chmod +x playit
+
+      - name: Criar pasta do servidor
+        run: |
+          mkdir server
+          cp -r ./server-files/* ./server || true
+          cd server
+          echo "eula=true" > eula.txt
+
+      - name: Iniciar servidor + Playit
+        run: |
+          nohup ./playit --secret "$PLAYIT_AUTH" > playit.log 2>&1 &
+          echo "Playit iniciado."
+
+          cd server
+          nohup java -Xms1G -Xmx2G -jar server.jar nogui > server.log 2>&1 &
+          echo "Servidor Minecraft iniciado."
+
+      - name: Manter rodando
+        run: |
+          echo "Loop infinito para manter o workflow rodando..."
+          while true; do
+            sleep 10
+          done
+    env:
+      PLAYIT_AUTH: ${{ secrets.PLAYIT_AUTH }}
